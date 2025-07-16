@@ -16,11 +16,11 @@ for file in file_list:
         
         
 base_input = r"118.안면 인식 에이징(aging) 이미지 데이터\Total"
-base_output = "Datasets"
-splits = ["Train", "Val", "Test"]
+base_output = "datasets"
+splits = ["train", "val", "test"]
 split_ratios = [0.7, 0.2, 0.1]
 
-for category in ["Adult", "Child"]:
+for category in ["adult", "child"]:
     files = glob(os.path.join(base_input, category, "*.png"))
     random.shuffle(files)
 
@@ -29,9 +29,9 @@ for category in ["Adult", "Child"]:
     val_end = train_end + int(total * split_ratios[1])
 
     split_files = {
-        "Train": files[:train_end],
-        "Val": files[train_end:val_end],
-        "Test": files[val_end:]
+        "train": files[:train_end],
+        "val": files[train_end:val_end],
+        "test": files[val_end:]
     }
 
     for split in splits:

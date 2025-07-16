@@ -6,8 +6,9 @@ import argparse
 import os
 from datetime import datetime
 
+# 모델 불러오기
 from dataset import BlurredImageDataset
-from models import SimpleCNN, ShallowCNN, VGG16, ResNet18Transfer, ResNet18_4ch, ResNet18_4ch_CBAM, ResNet18_EdgeAttention
+from models import SimpleCNN, ShallowCNN, VGG16, ResNet18Transfer, ResNet18_4ch, ResNet18_4ch_CBAM, ResNet18_EdgeAttention, EdgeResNet18
 from config import *
 
 def get_model(model_name):
@@ -25,15 +26,18 @@ def get_model(model_name):
         return ResNet18_4ch_CBAM(len(CLASS_NAMES))
     elif model_name == 'resnet18_edgeattn':
         return ResNet18_EdgeAttention(len(CLASS_NAMES))
+    elif model_name == 'edge_resnet':
+        return EdgeResNet18(len(CLASS_NAMES))
     else:
         raise ValueError("Unknown model name")
 
-def train(model_name='simple', use_edge=False):
+
+def train(model_name='simple'):
     device = torch.device(DEVICE if torch.cuda.is_available() else 'cpu')
 
-    # Data Loaders
-    train_loader = DataLoader(BlurredImageDataset('Datasets/Train', use_edge=use_edge, augment=True), batch_size=BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(BlurredImageDataset('Datasets/Val', use_edge=use_edge, augment=False), batch_size=BATCH_SIZE)
+    # Data Loaders (edge 사용 X)
+    train_loader = DataLoader(BlurredImageDataset('datasets/train', augment=True), batch_size=BATCH_SIZE, shuffle=True)
+    val_loader = DataLoader(BlurredImageDataset('datasets/val', augment=False), batch_size=BATCH_SIZE)
 
     # Model, criterion, optimizer
     model = get_model(model_name).to(device)
@@ -57,7 +61,7 @@ def train(model_name='simple', use_edge=False):
             images, labels = images.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            outputs = model(images)
+            outputs = model(images)  # ✅ 단일 입력
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -70,7 +74,7 @@ def train(model_name='simple', use_edge=False):
         train_acc = correct / total * 100
         avg_loss = running_loss / len(train_loader)
 
-        # Validation accuracy
+        # Validation
         model.eval()
         val_correct, val_total = 0, 0
         with torch.no_grad():
@@ -82,14 +86,13 @@ def train(model_name='simple', use_edge=False):
                 val_total += labels.size(0)
         val_acc = val_correct / val_total * 100
 
-        # Logging to console
+        # Logging
         print(f"[{model_name}] Epoch {epoch+1}, Loss: {avg_loss:.4f}, Train Acc: {train_acc:.2f}%, Val Acc: {val_acc:.2f}%")
 
-        # Logging to file
         with open(log_filename, "a") as f:
             f.write(f"{epoch+1},{avg_loss:.4f},{train_acc:.2f},{val_acc:.2f}\n")
 
-        # Early stopping
+        # Early Stopping
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             epochs_no_improve = 0
@@ -102,8 +105,10 @@ def train(model_name='simple', use_edge=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', default='simple', choices=['simple', 'shallow', 'vgg16', 'resnet18', 'resnet18_4ch', 'resnet18_4ch_cbam', 'resnet18_edgeattn'])
-    parser.add_argument('--use_edge', action='store_true', help='Use 4-channel input with edge information')
+    parser.add_argument('--model', default='simple', choices=[
+        'simple', 'shallow', 'vgg16', 'resnet18',
+        'resnet18_4ch', 'resnet18_4ch_cbam', 'resnet18_edgeattn', 'edge_resnet'
+    ])
     args = parser.parse_args()
 
-    train(args.model, use_edge=args.use_edge)
+    train(args.model)
