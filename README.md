@@ -25,6 +25,7 @@ BlurFaceDetection/
 ├── data_preparation.py    # 데이터 전처리 및 분할 스크립트
 ├── notebooks/             # 실험 노트북 저장소
 └── README.md              # 프로젝트 설명 파일
+```
 
 
 ## 📦 데이터 출처 (Data Source)
